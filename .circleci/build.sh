@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 echo "Cloning dependencies"
-#git clone --depth=1 https://github.com/kdrag0n/proton-clang clang
+git clone --depth=1 https://github.com/kdrag0n/proton-clang clang
 git clone --depth=1 https://github.com/NotZeetaa/Flashable_Zip_lmi.git AnyKernel
 echo "Done"
 IMAGE=$(pwd)/out/arch/arm64/boot/Image
@@ -12,14 +12,6 @@ export KBUILD_COMPILER_STRING="$(${KERNEL_DIR}/clang/bin/clang --version | head 
 export ARCH=arm64
 export KBUILD_BUILD_HOST=droneci
 export KBUILD_BUILD_USER="NotZeetaa"
-# use ccache
-export USE_CCACHE=1
-#
-#ccache variables
-export CCACHE_DIR="$HOME/.ccache"
-export CC="ccache gcc"
-export CXX="ccache g++"
-export PATH="/usr/lib/ccache:$PATH"
 # Send info plox channel
 function sendinfo() {
     curl -s -X POST "https://api.telegram.org/bot$token/sendMessage" \
@@ -52,9 +44,10 @@ function compile() {
     make O=out ARCH=arm64 vendor/nexus_defconfig
     make -j$(nproc --all) O=out \
                           ARCH=arm64 \
-			  CC=gcc \
+			  CC=clang \
 			  LD=ld.lld \
-			  CROSS_COMPILE_ARM32=arm-linux-gnueabi-
+			  CROSS_COMPILE_ARM32=arm-linux-gnueabi- \
+			  aarch64-linux-gnu-gcc
 
     if ! [ -a "$IMAGE" ]; then
         finerr
