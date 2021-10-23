@@ -49,12 +49,11 @@ function finerr() {
 }
 # Compile plox
 function compile() {
-    make O=out ARCH=arm64 nexus_defconfig
+    make O=out ARCH=arm64 vendor/lmi_user_defconfig
     make -j$(nproc --all) O=out \
                           ARCH=arm64 \
 			  CC=clang \
 			  LD=ld.lld \
-			  CROSS_COMPILE=aarch64-linux-gnu- \
 			  CROSS_COMPILE_ARM32=arm-linux-gnueabi-
 
     if ! [ -a "$IMAGE" ]; then
