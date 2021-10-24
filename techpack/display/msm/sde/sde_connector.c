@@ -172,7 +172,6 @@ static int sde_backlight_setup(struct sde_connector *c_conn,
 		return -ENODEV;
 	}
 	display_count++;
-
 	rc = sde_backlight_clone_setup(c_conn, dev->dev, c_conn->bl_device);
 	if (rc) {
 		SDE_ERROR("Failed to register backlight_clone_cdev: %ld\n",
@@ -182,7 +181,6 @@ static int sde_backlight_setup(struct sde_connector *c_conn,
 		c_conn->bl_device = NULL;
 		return -ENODEV;
 	}
-
 	return 0;
 }
 
@@ -596,7 +594,7 @@ static int _sde_connector_update_bl_scale(struct sde_connector *c_conn)
 	struct dsi_display *dsi_display;
 	struct dsi_backlight_config *bl_config;
 	int rc = 0;
-
+	struct backlight_device *bl_dev;
 	if (!c_conn) {
 		SDE_ERROR("Invalid params sde_connector null\n");
 		return -EINVAL;
@@ -610,10 +608,19 @@ static int _sde_connector_update_bl_scale(struct sde_connector *c_conn)
 		return -EINVAL;
 	}
 
+	bl_dev = c_conn->bl_device;
+	if (!bl_dev) {
+		SDE_ERROR("Invalid params (s) backlight_device null\n");
+		return -EINVAL;
+	}
+
+	mutex_lock(&bl_dev->update_lock);
+
 	bl_config = &dsi_display->panel->bl_config;
 
 	if (!c_conn->allow_bl_update) {
 		c_conn->unset_bl_level = bl_config->bl_level;
+		mutex_unlock(&bl_dev->update_lock);
 		return 0;
 	}
 
@@ -631,7 +638,7 @@ static int _sde_connector_update_bl_scale(struct sde_connector *c_conn)
 	rc = c_conn->ops.set_backlight(&c_conn->base,
 			dsi_display, bl_config->bl_level);
 	c_conn->unset_bl_level = 0;
-
+        mutex_unlock(&bl_dev->update_lock);
 	return rc;
 }
 
@@ -1274,7 +1281,6 @@ void sde_connector_destroy(struct drm_connector *connector)
 		drm_property_blob_put(c_conn->blob_mode_info);
 	if (c_conn->blob_ext_hdr)
 		drm_property_blob_put(c_conn->blob_ext_hdr);
-
 	if (c_conn->cdev_clone)
 		backlight_clone_cdev_unregister(c_conn->cdev_clone);
 	if (c_conn->bl_device)
@@ -1762,10 +1768,12 @@ static int sde_connector_atomic_set_property(struct drm_connector *connector,
 	 * atomic set property framework.
 	 */
 	case CONNECTOR_PROP_BL_SCALE:
+		//c_conn->bl_scale = val;
 		c_conn->bl_scale = MAX_BL_SCALE_LEVEL;
 		c_conn->bl_scale_dirty = true;
 		break;
 	case CONNECTOR_PROP_SV_BL_SCALE:
+		//c_conn->bl_scale_sv = val;
 		c_conn->bl_scale_sv = MAX_SV_BL_SCALE_LEVEL;
 		c_conn->bl_scale_dirty = true;
 		break;
@@ -2317,6 +2325,7 @@ end:
 	return rc;
 }
 
+
 static const struct file_operations conn_esd_test_fops = {
 	.open  = _sde_debugfs_conn_esd_test_open,
 	.write = _sde_debugfs_conn_esd_test_write,
@@ -2534,6 +2543,8 @@ static int sde_connector_atomic_check(struct drm_connector *connector,
 		struct drm_connector_state *new_conn_state)
 {
 	struct sde_connector *c_conn;
+	struct sde_connector_state *c_state;
+	bool qsync_dirty = false, has_modeset = false;
 
 	if (!connector) {
 		SDE_ERROR("invalid connector\n");
@@ -2546,6 +2557,19 @@ static int sde_connector_atomic_check(struct drm_connector *connector,
 	}
 
 	c_conn = to_sde_connector(connector);
+	c_state = to_sde_connector_state(new_conn_state);
+
+	has_modeset = sde_crtc_atomic_check_has_modeset(new_conn_state->state,
+						new_conn_state->crtc);
+	qsync_dirty = msm_property_is_dirty(&c_conn->property_info,
+					&c_state->property_state,
+					CONNECTOR_PROP_QSYNC_MODE);
+
+	SDE_DEBUG("has_modeset %d qsync_dirty %d\n", has_modeset, qsync_dirty);
+	if (has_modeset && qsync_dirty) {
+		SDE_ERROR("invalid qsync update during modeset\n");
+		return -EINVAL;
+	}
 
 	if (c_conn->ops.atomic_check)
 		return c_conn->ops.atomic_check(connector,
@@ -2568,8 +2592,10 @@ static void _sde_connector_report_panel_dead(struct sde_connector *conn,
 	 * 2) Commit thread (if TE stops coming)
 	 * So such case, avoid failure notification twice.
 	 */
-	if (conn->panel_dead)
+	if (conn->panel_dead) {
+		SDE_INFO("panel_dead is true, return!\n");
 		return;
+	}
 
 	conn->panel_dead = true;
 	display->panel->mi_cfg.panel_dead_flag = true;
@@ -3241,14 +3267,7 @@ int sde_connector_pre_hbm_ctl(struct drm_connector *connector)
 
 static uint32_t interpolate(uint32_t x, uint32_t xa, uint32_t xb, uint32_t ya, uint32_t yb)
 {
-	uint32_t bf;
-
-	bf = ya - (ya - yb) * (x - xa) / (xb - xa);
-
-	SDE_DEBUG("backlight brightness:%d, [i-1]bl:%d, [i]bl:%d, [i-1]alpha:%d, [i]alpha:%d, bf:%d",
-			x, xa, xb, ya, yb, bf);
-
-	return bf;
+	return ya - (ya - yb) * (x - xa) / (xb - xa);
 }
 
 static uint32_t brightness_to_alpha(struct dsi_panel_mi_cfg *mi_cfg, uint32_t brightness)

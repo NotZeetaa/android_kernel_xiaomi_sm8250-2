@@ -44,13 +44,10 @@
 	for (index = 0; (index < (display)->ctrl_count) &&\
 			(index < MAX_DSI_CTRLS_PER_DISPLAY); index++)
 
-#define DSI_WARN(fmt, ...)	DRM_WARN("[msm-dsi-warn]: "fmt, ##__VA_ARGS__)
-#define DSI_ERR(fmt, ...)	DRM_DEV_ERROR(NULL, "[msm-dsi-error]: " fmt, \
-								##__VA_ARGS__)
-#define DSI_INFO(fmt, ...)	DRM_DEV_INFO(NULL, "[msm-dsi-info]: "fmt, \
-								##__VA_ARGS__)
-#define DSI_DEBUG(fmt, ...)	DRM_DEV_DEBUG(NULL, "[msm-dsi-debug]: "fmt, \
-								##__VA_ARGS__)
+#define DSI_WARN(fmt, ...)
+#define DSI_ERR(fmt, ...)
+#define DSI_INFO(fmt, ...)
+#define DSI_DEBUG(fmt, ...)
 /**
  * enum dsi_pixel_format - DSI pixel formats
  * @DSI_PIXEL_FORMAT_RGB565:
@@ -307,6 +304,7 @@ enum dsi_cmd_set_type {
 	DSI_CMD_SET_POST_TIMING_SWITCH,
 	DSI_CMD_SET_QSYNC_ON,
 	DSI_CMD_SET_QSYNC_OFF,
+	/* xiaomi add start */
 	DSI_CMD_SET_MI_CEON,
 	DSI_CMD_SET_MI_CEOFF,
 	DSI_CMD_SET_MI_CABCUION,
@@ -374,6 +372,7 @@ enum dsi_cmd_set_type {
 	DSI_CMD_SET_MI_GAMMA_B7,
 	DSI_CMD_SET_MI_BLACK_SETTING,
 	DSI_CMD_SET_MI_READ_LOCKDOWN_INFO,
+	/* xiaomi add end */
 	DSI_CMD_SET_MAX
 };
 
