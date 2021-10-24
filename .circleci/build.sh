@@ -46,8 +46,8 @@ function compile() {
                           ARCH=arm64 \
 			  CC=clang \
 			  LD=ld.lld \
-			  CROSS_COMPILE_ARM32=arm-linux-gnueabi- \
-			  aarch64-linux-gnu-gcc
+			  CROSS_COMPILE=aarch64-linux-gnu- \
+			  CROSS_COMPILE_ARM32=arm-linux-gnueabi-
 
     if ! [ -a "$IMAGE" ]; then
         finerr
