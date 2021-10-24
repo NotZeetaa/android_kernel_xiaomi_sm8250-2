@@ -53,7 +53,7 @@ function compile() {
         finerr
         exit 1
     fi
-    cp out/arch/arm64/boot/Image.gz AnyKernel
+    cp out/arch/arm64/boot/Image AnyKernel
     cp out/arch/arm64/boot/dts/vendor/qcom/kona-v2.1.dtb AnyKernel/dtb
 }
 # Zipping
