@@ -54,7 +54,7 @@ function compile() {
         exit 1
     fi
     cp out/arch/arm64/boot/Image AnyKernel
-    cp out/arch/arm64/boot/dts/vendor/qcom/kona-v2.1.dtb AnyKernel/dtb
+    cp out/arch/arm64/boot/dtbo.img AnyKernel
 }
 # Zipping
 function zipping() {
